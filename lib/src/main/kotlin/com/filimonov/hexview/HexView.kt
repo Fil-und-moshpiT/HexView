@@ -7,23 +7,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.layout.SubcomposeLayoutState
 import androidx.compose.ui.platform.LocalDensity
 import glm_.vec2.Vec2i
 import kotlin.math.roundToInt
 
 /*
     todo:
-        +1 define hexes that will fill all screen
-        +2 store in hexMap only one big hex
-        +3 define central hex
-        +4 on drag move hex grid and offset central hex
-        +5 on drag end calculate central hex and store it
-        +6 normalize hexes which out of hexMap
-        +7 add calculating elements size by distance from center
-
-    links:
-        https://observablehq.com/@sanderevers/hexagon-tiling-of-an-hexagonal-grid
-        https://observablehq.com/@sanderevers/hexmod-representation
+        try to cache hex positions
+        check center hex calculation on drag end
+        +add custom subcompose state
+        +add composables caching
  */
 
 @Suppress("unused")
@@ -55,27 +49,38 @@ fun <T> HexView(
             HexViewDragState { layoutHelper.center - layoutHelper.getPosition(hexContainer.center) }
         }
 
+        val itemContentFactory = remember { HexViewItemContentFactory(content) }
+
+        val subcomposeLayoutState = remember(map) { SubcomposeLayoutState(HexViewSlotReusePolicy(map)) }
+
         SubcomposeLayout(
+            state = subcomposeLayoutState,
             modifier = Modifier.fillMaxSize().then(dragState.dragModifier)
         ) {
             layout(width, height) {
                 val offset by dragState.dragged
                 hexContainer.setCenter(layoutHelper.getCenterHex(-offset))
 
-                val hexSizes = hexContainer.offsets.associateWith {
-                    val coefficient = layoutHelper.getSizeCoefficient(it, offset)
+                val hexRawPositions = hexContainer.offsets.associateWith { layoutHelper.getPosition(it) + offset }
 
-                    (layoutHelper.hexHalfSize * coefficient).roundToInt() * 2
+                val hexSizes = hexRawPositions.mapValues {
+                    (layoutHelper.hexSize * layoutHelper.getSizeCoefficient(it.value)).roundToInt()
                 }
 
-                val hexPositions = hexContainer.offsets.associateWith { layoutHelper.getPosition(it) + offset - (hexSizes[it]!! / 2) }
+                val hexPositions = hexRawPositions.mapValues {
+                    val hex = it.key
+                    val position = it.value
+                    position - (hexSizes[hex]!! / 2)
+                }
+
 
                 hexContainer.offsets.forEach { hex ->
                     val position = hexPositions[hex]!!
                     val hexSize = hexSizes[hex]!!
                     val localConstraints = constraints.copy(hexSize, hexSize, hexSize, hexSize)
 
-                    subcompose(hex) { content.invoke(map.getNormalizedData(hex)) }
+                    val slotId = hex - hexContainer.center // slot id - normalized hex
+                    subcompose(slotId) { itemContentFactory.getComposable(map.getData(hex)).invoke() }
                         .map { it.measure(localConstraints) }
                         .forEach { it.place(position.x, position.y) }
                 }

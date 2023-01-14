@@ -24,7 +24,7 @@ internal class HexViewLayoutHelper(
     /**
      * Hex size for displaying
      */
-    val hexHalfSize = orientation.getHexInnerRadius(max(layoutSize.x, layoutSize.y), mapSize - 1)
+    val hexSize = orientation.getHexInnerRadius(max(layoutSize.x, layoutSize.y), mapSize - 1) * 2
 
     /**
      * Hex size for internal computing
@@ -39,8 +39,8 @@ internal class HexViewLayoutHelper(
 
     fun getCenterHex(offset: Vec2i): Hex = getHexFromPoint(center + offset)
 
-    fun getSizeCoefficient(hex: Hex, offset: Vec2i): Float {
-        val hexDistance = distance(center, offset + getPosition(hex))
+    fun getSizeCoefficient(position: Vec2i): Float {
+        val hexDistance = distance(center, position)
         val result = IntRange(100, 25).scaleFor(hexDistance, distanceToCenter) / 100f
 
         return if (result > 0f) result else 0f

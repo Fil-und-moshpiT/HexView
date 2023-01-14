@@ -8,8 +8,6 @@ package com.filimonov.hexview
  */
 internal class HexMap<T>(val size: Int, private val elements: List<T>) {
     val center = Hex(0, 0, 0)
-    private val hexes: List<Hex>
-        get() = hexToIds.keys.toList()
 
     /**
      * Stores unique id for each hex. Minimal value = 0. Maximal value = 3size^2 + 3size + 1.
@@ -26,10 +24,7 @@ internal class HexMap<T>(val size: Int, private val elements: List<T>) {
         reorder()
     }
 
-    fun getNormalizedData(hex: Hex): T {
-        val hexMod = hexMod(hex)
-        return idToElements[hexMod]!!
-    }
+    fun getData(hex: Hex): T = idToElements[hexMod(hex)]!!
 
     private fun hexMod(hex: Hex): Int {
         val a = 3 * size * size + 3 * size + 1
@@ -78,10 +73,6 @@ internal class HexMap<T>(val size: Int, private val elements: List<T>) {
     fun getLayoutCorners(topStart: Hex, orientation: Orientation): LayoutCorners {
         return when (orientation) {
             is Orientation.FlatTop -> {
-                // bottom start = reflect q
-                // top end = center - bottomStart
-                // bottom end = center - topStart
-
                 // reflect topStart by q-axis
                 val bottomStart = Hex(topStart.q, topStart.s, topStart.r)
                 val topEnd = center - bottomStart
@@ -95,10 +86,6 @@ internal class HexMap<T>(val size: Int, private val elements: List<T>) {
                 )
             }
             is Orientation.PointyTop -> {
-                // top end = reflect r
-                // bottom start = center - topEnd
-                // bottom end = center - topStart
-
                 // reflect topStart by r-axis
                 val topEnd = Hex(topStart.s, topStart.r, topStart.q)
                 val bottomStart = center - topEnd
